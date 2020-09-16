@@ -396,7 +396,7 @@ def pipeline(dia_ini, mes, anno, replace_data_ttec=False, replace_resumen=False,
                 logger.info(f"Descargando data Tracktec SOC para fecha {fecha_}")
                 dfx = consultar_soc_ttec(fecha_)
                 fecha__1 = fecha_.replace('-', '_')
-                dfx.to_parquet(f'dataS0C_{fecha__1}.parquet', compression='gzip')
+                dfx.to_parquet(f'data_SOC_{fecha__1}.parquet', compression='gzip')
         else:
             logger.info('Consultando servidor mysql por datos tracktec')
             descargar_semana_ttec(fechas_de_interes)
