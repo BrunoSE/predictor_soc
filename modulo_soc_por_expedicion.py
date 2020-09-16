@@ -202,8 +202,6 @@ def consultar_transmisiones_tracktec_por_dia(fecha_dia):
 
 def descargar_data_ttec(fecha__):
     fecha__2 = fecha__.replace('-', '_')
-    # logger.info(f"{consultar_soc_id(142339596)}")
-    # df = consultar_soc_ttec('2020-08-20')
     dfx = consultar_transmisiones_tracktec_por_dia(fecha__)
     dfx.to_parquet(f'data_{fecha__2}.parquet', compression='gzip')
 
@@ -245,11 +243,6 @@ def descargar_resumen_ftp(fecha_inicio, descargar_data_gps=False):
         logger.warning(f'No se pudo conectar al servidor en '
                        f'{max_reintentos} intentos.')
         raise TimeoutError
-
-
-def descargar_semana_ftp(fechas):
-    for fecha_ in fechas:
-        descargar_resumen_ftp(fecha_)
 
 
 def distancia_wgs84(lat1: float, lon1: float, lat2: float, lon2: float):
@@ -337,7 +330,7 @@ def mezclar_data(fecha):
     return df196r_ef
 
 
-def pipeline(dia_ini, mes, anno, replace_data_ttec=False, replace_resumen=False):
+def pipeline(dia_ini, mes, anno, replace_data_ttec=False, replace_resumen=False, solosoc=False):
     # Sacar fechas de interes a partir de lunes inicio de semana
     fecha_dia_ini = pd.to_datetime(f'{dia_ini}-{mes}-{anno}', dayfirst=True).date()
     dia_de_la_semana = fecha_dia_ini.isoweekday()
@@ -384,26 +377,40 @@ def pipeline(dia_ini, mes, anno, replace_data_ttec=False, replace_resumen=False)
     logger.addHandler(file_handler)
 
     if no_existia_semana or replace_data_ttec:
-        logger.info('Consultando servidor mysql por datos tracktec')
-        descargar_semana_ttec(fechas_de_interes)
+
+        if solosoc:
+            for fecha_ in fechas_de_interes:
+                logger.info(f"Descargando data Tracktec SOC para fecha {fecha_}")
+                dfx = consultar_soc_ttec(fecha_)
+                fecha__1 = fecha_.replace('-', '_')
+                dfx.to_parquet(f'dataS0C_{fecha__1}.parquet', compression='gzip')
+        else:
+            logger.info('Consultando servidor mysql por datos tracktec')
+            descargar_semana_ttec(fechas_de_interes)
+
     fechas_de_interes = [x.replace('-', '_') for x in fechas_de_interes]
 
     if no_existia_semana or replace_resumen:
         logger.info('Descargando archivos de resumen del FTP')
-        descargar_semana_ftp(fechas_de_interes)
+        for fecha_ in fechas_de_interes:
+            descargar_resumen_ftp(fecha_, descargar_data_gps=solosoc)
+    if solosoc:
+        return fechas_de_interes
+    else:
+        df_f = []
+        for fi in fechas_de_interes:
+            logger.info(f'Concatenando y mezclando data de fecha {fi}')
+            df_f.append(mezclar_data(fi))
 
-    df_f = []
-    for fi in fechas_de_interes:
-        logger.info(f'Concatenando y mezclando data de fecha {fi}')
-        df_f.append(mezclar_data(fi))
+        df_f = pd.concat(df_f)
+        df_f['Intervalo'] = pd.to_datetime(df_f['Intervalo'], errors='raise',
+                                           format="%H:%M:%S")
 
-    df_f = pd.concat(df_f)
-    df_f['Intervalo'] = pd.to_datetime(df_f['Intervalo'], errors='raise',
-                                       format="%H:%M:%S")
+        df_f.to_parquet(f'dataf_{nombre_semana}.parquet', compression='gzip')
+        logger.info('Listo todo para esta semana')
 
-    df_f.to_parquet(f'dataf_{nombre_semana}.parquet', compression='gzip')
-    logger.info('Listo todo para esta semana')
-    os.chdir('..')
+        os.chdir('..')
+        return None
 
 
 if __name__ == '__main__':

@@ -9,18 +9,28 @@ else:
     ip_bd_edu = "192.168.11.150"
 
 
-def descargar_data_ttec_soc(fecha__):
-    fecha__2 = fecha__.replace('-', '_')
-    # logger.info(f"{consultar_soc_id(142339596)}")
-    # df = consultar_transmisiones_con_soc_por_semana('2020-08-20', '2020-08-20')
-    dfx = spe.consultar_soc_ttec(fecha__)
-    dfx.to_parquet(f'data_{fecha__2}.parquet', compression='gzip')
+def p_pipeline(diap, mesp, annop, rd, rr, soc=True):
+    fechas_de_interes = spe.pipeline(diap, mesp, annop, rd, rr, solosoc=soc)
 
+    df_f = []
+    for fi in fechas_de_interes:
+        logger.info(f'Concatenando y mezclando data de fecha {fi}')
+        df_f.append(mezclar_data(fi))
 
-def pipeline_predictor():
-    return
+    df_f = pd.concat(df_f)
+    df_f['Intervalo'] = pd.to_datetime(df_f['Intervalo'], errors='raise',
+                                       format="%H:%M:%S")
+
+    df_f.to_parquet(f'dataf_{nombre_semana}.parquet', compression='gzip')
+    logger.info('Listo todo para esta semana')
+
+    os.chdir('..')
 
 if __name__ == '__main__':
     logger = spe.mantener_log()
-    spe.consultar_numero_transmisiones_por_semana()
+    reemplazar_data_ttec = False
+    reemplazar_resumen = False
+    p_pipeline(7, 9, 2020, reemplazar_data_ttec, reemplazar_resumen)
+
+
     logger.info('Listo todo')
