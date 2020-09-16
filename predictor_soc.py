@@ -17,24 +17,19 @@ def cruzar_gps_ttec(fecha):
     df196r = pd.read_excel(f'Cruce_196resumen_data_{fecha}_revisado.xlsx')
     logger.info(f"Expediciones iniciales en resumen diario: {len(df196r.index)}")
     df196r = df196r.loc[df196r['Servicio'].isin(servicios_de_interes)]
-    df196r = df196r.loc[~(df196r['hora_inicio'].isna())]
+
+    df196r['Intervalo'] = pd.to_datetime(df196r['Intervalo'], errors='raise',
+                                         format="%H:%M:%S")
 
 
 def p_pipeline(diap, mesp, annop, rd, rr, soc=True):
     fechas_de_interes, nombre_semana = spe.pipeline(diap, mesp, annop, rd, rr, solosoc=soc)
 
-    df_f = []
     for fi in fechas_de_interes:
-        logger.info(f'Cruzando data de fecha {fi}')
-        df_f.append(cruzar_gps_ttec(fi))
+        logger.info(f'Cruzando con GPS de fecha {fi}')
+        cruzar_gps_ttec(fi)
 
-    df_f = pd.concat(df_f)
-    df_f['Intervalo'] = pd.to_datetime(df_f['Intervalo'], errors='raise',
-                                       format="%H:%M:%S")
-
-    df_f.to_parquet(f'dataf_{nombre_semana}.parquet', compression='gzip')
     logger.info('Listo todo para esta semana')
-
     os.chdir('..')
 
 

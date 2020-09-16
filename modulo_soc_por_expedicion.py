@@ -131,12 +131,25 @@ def consultar_soc_ttec(fecha_dia):
                  """
                  )
 
-    df__ = procesar_datos_consulta(cur1)
+    datos = [row for row in cur1.fetchall() if row[0] is not None]
+    df_ = pd.DataFrame(datos, columns=[i[0] for i in cur1.description])
+    df_.set_index('id', inplace=True)
+    for columna in ['latitud', 'longitud', 'valor_soc']:
+        try:
+            df_[columna] = pd.to_numeric(df_[columna])
+        except ValueError:
+            logger.exception(f'Error en columna {columna}')
+
+    df_['fecha_hora_consulta'] = pd.to_datetime(df_['fecha_hora_consulta'], errors='raise',
+                                                format="%Y-%m-%d %H:%M:%S")
+    df_['fecha_evento'] = pd.to_datetime(df_['fecha_evento'], errors='raise',
+                                         format="%Y-%m-%d")
+    df_['fecha_hora_evento'] = df_['fecha_evento'] + df_['hora_evento']
 
     cur1.close()
     db1.close()
 
-    return df__
+    return df_
 
 
 def consultar_transmisiones_tracktec_por_dia(fecha_dia):
