@@ -395,7 +395,7 @@ def pipeline(dia_ini, mes, anno, replace_data_ttec=False, replace_resumen=False,
         for fecha_ in fechas_de_interes:
             descargar_resumen_ftp(fecha_, descargar_data_gps=solosoc)
     if solosoc:
-        return fechas_de_interes
+        return fechas_de_interes, nombre_semana
     else:
         df_f = []
         for fi in fechas_de_interes:
